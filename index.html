@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 12px sans-serif;
+  text-align: center;
+}
+
+svg {
+  margin-top: 25px;
+}
+
+.node {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: .6;
+}
+
+  .d3-tip {
+    line-height: 1;
+    padding: 12px;
+    background: #1F77B4;
+    font-size: 14px;
+    text-align: center;
+    color: white;
+    border-radius: 20px;
+  }
+
+  /* Creates a small triangle extender for the tooltip */
+  .d3-tip:after {
+    box-sizing: border-box;
+    display: inline;
+    font-size: 10px;
+    width: 100%;
+    line-height: 1;
+    color: #1F77B4;
+    content: "\25BC";
+    position: absolute;
+    text-align: center;
+  }
+
+  /* Style northward tooltips differently */
+  .d3-tip.n:after {
+    margin: -1px 0 0 0;
+    top: 100%;
+    left: 0;
+  }
+
+
+</style>
+<body>
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<script>
+
+var width = 960,
+    height = 720;
+
+var color = d3.scale.category20();
+
+var force = d3.layout.force()
+    .charge(-225)
+    .gravity(0.17)
+    .linkDistance(100)
+    .size([width, height]);
+
+var tip = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([-10, 0])
+  .html(function(d) {
+    return "<span>" + d.name +"</span>";
+  });
+
+
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  var url = "http://www.freecodecamp.com/news/hot";
+  var nodes = [];
+  var links = [];
+
+svg.call(tip);
+
+d3.json(url, function(error, json) {
+  if (error) throw error;
+    
+  for (var i = 0; i < json.length; i++) {
+
+    // check if user in array
+    var namePos = -1;
+    for (var j = 0; j < nodes.length; j++) {
+      if (nodes[j].name === json[i].author.username) {
+        namePos = j;
+      }
+    }
+      
+    // if new - add user to array
+    if (namePos === -1) {
+      nodes.push({"name": json[i].author.username, "pic": json[i].author.picture, "group": 1});
+      namePos = nodes.length - 1;
+    }
+      
+    // clean up link url 
+    var yourUrl = json[i].link;
+    var parse_url = /^(?:([A-Za-z]+):)?(\/{0,3})([0-9.\-A-Za-z]+)(?::(\d+))?(?:\/([^?#]*))?(?:\?([^#]*))?(?:#(.*))?$/;
+    var parts = parse_url.exec( yourUrl );
+    var linkUrl = parts[3].replace("www.", "").replace("blog.", "").replace("freecodecamp.", "").replace("garage.", "").replace("developers.", "").replace("motherboard.", "");
+      
+    // check if user in array
+    var linkPos = -1;
+    for (var k = 0; k < nodes.length; k++) {
+      if (nodes[k].name === linkUrl) {
+        linkPos = k;
+      }
+    }
+      
+    // if new - add link url to array
+    if (linkPos === -1) {
+      nodes.push({"name": linkUrl, "pic": "http://ezchx.com/forcedirectedgraph/blue_sphere.png", "group": 2});
+      linkPos = nodes.length - 1;
+    }
+
+      
+    // Update links array
+    links.push({"source": namePos, "target": linkPos, "value": 4});
+      
+  }
+
+
+  force
+      .nodes(nodes)
+      .links(links)
+      .start();
+
+  var link = svg.selectAll(".link")
+      .data(links)
+    .enter().append("line")
+      .attr("class", "link")
+      .style("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+  var node = svg.selectAll(".node")
+      .data(nodes)
+    .enter().append("g")
+      .attr("class", "node")
+      .call(force.drag)
+      .on('mouseover', tip.show)
+      .on('mouseout', tip.hide);
+
+  node.append("image")
+      .attr("xlink:href", function(d) { return d.pic; })
+      .attr("x", function(d) { return (-d.weight*1.3)-8; })
+      .attr("y", function(d) { return (-d.weight*1.3)-8; })
+      .attr("width", function(d) { return (d.weight * 2) + 25; })
+      .attr("height", function(d) { return (d.weight * 2) + 25; });
+      
+
+  force.on("tick", function() {
+    link.attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+  });
+
+
+
+});
+
+</script>
